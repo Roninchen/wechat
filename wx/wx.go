@@ -5,12 +5,15 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
+	"github.com/astaxie/beego/logs"
+	"github.com/clbanning/mxj"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"sort"
-
-	"github.com/clbanning/mxj"
+	"strconv"
+	"strings"
+	"wechat/movie"
 )
 
 type weixinQuery struct {
@@ -109,26 +112,55 @@ func (this *WeixinClient) initMessage() error {
 func (this *WeixinClient) text() {
 
 	inMsg, ok := this.Message["Content"].(string)
-
+	if strings.Contains(inMsg,"易达") {
+		bytes := interstingReturn(this,"找帅哥干嘛!")
+		this.ResponseWriter.Header().Set("Content-Type", "news/xml")
+		this.ResponseWriter.Write(bytes)
+	}
+	logs.Info(inMsg)
 	if !ok {
 		return
 	}
-
-	var reply TextMessage
-
-	reply.InitBaseData(this, "text")
-	reply.Content = value2CDATA(fmt.Sprintf("我收到的是：%s", inMsg))
-
-	replyXml, err := xml.Marshal(reply)
-
+	movieInfo := movie.GetMovieInfo("1", inMsg)
+	if  movieInfo == nil{
+		logs.Info("movieInfo is null")
+		return
+	}
+	var news NewsMessage
+	news.InitBaseData(this,"news")
+	//news.ArticleCount = 1
+	news.ArticleCount = len(movieInfo)
+	logs.Info(len(movieInfo))
+	for _,v := range movieInfo {
+		movieId := strconv.FormatInt(v.Movie_id,10)
+		logs.Info(v)
+		news.Articles = append(news.Articles, Article{Title:"影片名:"+v.Movie_name, Description: "豆瓣评分:"+v.Movie_grade+"分", PicURL:v.Movie_pic, URL:"https://movie.douban.com/subject/"+movieId+"/"})
+	}
+	//movieId := strconv.FormatInt(movieInfo.Movie_id,10)
+	//news.Articles = append(news.Articles, &Article{Title:movieInfo.Movie_name, Description: movieInfo.Movie_grade+"分", PicURL:movieInfo.Movie_pic, URL:"https://movie.douban.com/subject/"+movieId+"/"})
+	newsXml, err := xml.Marshal(news)
 	if err != nil {
-		log.Println(err)
+		logs.Info(err)
 		this.ResponseWriter.WriteHeader(403)
 		return
 	}
 
-	this.ResponseWriter.Header().Set("Content-Type", "text/xml")
-	this.ResponseWriter.Write(replyXml)
+	//var reply TextMessage
+	//info := movie.GetMovieInfo("1", inMsg)
+	//reply.InitBaseData(this, "text")
+	////reply.Content = value2CDATA(fmt.Sprintf("我收到的是：%s", inMsg))
+	//log.Println(info)
+	//reply.Content = value2CDATA(fmt.Sprintf("为你查到以下信息：\n%s", info))
+	//replyXml, err := xml.Marshal(reply)
+    //log.Println(replyXml)
+	//if err != nil {
+	//	log.Println(err)
+	//	this.ResponseWriter.WriteHeader(403)
+	//	return
+	//}
+	//
+	//this.ResponseWriter.Header().Set("Content-Type", "news/xml")
+	this.ResponseWriter.Write(newsXml)
 }
 
 func (this *WeixinClient) Run() {
@@ -137,7 +169,7 @@ func (this *WeixinClient) Run() {
 
 	if err != nil {
 
-		log.Println(err)
+		logs.Info(err)
 		this.ResponseWriter.WriteHeader(403)
 		return
 	}
@@ -158,4 +190,18 @@ func (this *WeixinClient) Run() {
 	}
 
 	return
+}
+
+func interstingReturn(this *WeixinClient,text string) []byte {
+	var reply TextMessage
+	reply.InitBaseData(this, "text")
+	reply.Content = value2CDATA(fmt.Sprintf(text))
+	replyXml, err := xml.Marshal(reply)
+	log.Println(replyXml)
+	if err != nil {
+		log.Println(err)
+		this.ResponseWriter.WriteHeader(403)
+		return nil
+	}
+	return replyXml
 }
