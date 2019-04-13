@@ -30,3 +30,24 @@ type TextMessage struct {
 	Base
 	Content CDATAText
 }
+
+type NewsMessage struct {
+	XMLName xml.Name `xml:"xml"`
+	Base
+	ArticleCount int    `xml:"ArticleCount"`
+	Articles []Article `xml:"Articles>item,omitempty"`
+}
+type Item struct {
+	Title CDATAText
+	Description CDATAText
+	PicUrl CDATAText
+	Url CDATAText
+}
+
+//Article 单篇文章
+type Article struct {
+	Title       string `xml:"Title,omitempty"`
+	Description string `xml:"Description,omitempty"`
+	PicURL      string `xml:"PicUrl,omitempty"`
+	URL         string `xml:"Url,omitempty"`
+}
