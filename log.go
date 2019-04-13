@@ -11,6 +11,7 @@ func init() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 }
 
+
 func writeLog(r *http.Request, t time.Time, match string, pattern string) {
 
 	if logLevel != "prod" {

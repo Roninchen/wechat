@@ -42,7 +42,6 @@ func post(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(403)
 		return
 	}
-
 	client.Run()
 	return
 }
